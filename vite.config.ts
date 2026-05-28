@@ -2,10 +2,44 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        workbox: {
+          runtimeCaching: [
+            {
+              urlPattern: ({ request }) => true,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'app-cache',
+                networkTimeoutSeconds: 3,
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+          ],
+        },
+        manifest: {
+          name: 'UUID Generator',
+          short_name: 'UUIDGen',
+          description: 'Fast and flexible UUID Generator',
+          theme_color: '#ffffff',
+          background_color: '#ffffff',
+          display: 'standalone',
+        }
+      })
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
