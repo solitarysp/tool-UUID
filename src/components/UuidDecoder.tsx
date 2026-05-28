@@ -7,6 +7,13 @@ import { DESCRIPTIONS } from '../data/uuid-data';
 import { parseUuid, ParsedIdentifier } from '../lib/uuid-parser';
 import { UuidParseResult } from './UuidParseResult';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import SeoHead from './SeoHead';
+import {
+  getBreadcrumbJsonLd,
+  getOrganizationJsonLd,
+  getSoftwareApplicationJsonLd,
+  getWebsiteJsonLd,
+} from '../lib/seo';
 
 export default function UuidDecoder() {
   const navigate = useNavigate();
@@ -145,9 +152,29 @@ export default function UuidDecoder() {
     estimateSize: () => 180, // estimated height of result card
     overscan: 5,
   });
+  const decoderDescription =
+    'Decode UUIDs and other identifier formats in batches to validate versions, variants, and embedded timestamps.';
+  const decoderJsonLd = useMemo(
+    () => [
+      getWebsiteJsonLd(),
+      getOrganizationJsonLd(),
+      getSoftwareApplicationJsonLd('/decode', decoderDescription),
+      getBreadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Decoder', path: '/decode' },
+      ]),
+    ],
+    [decoderDescription]
+  );
 
   return (
     <div className="flex flex-col h-full w-full">
+      <SeoHead
+        title="UUID Decoder"
+        description={decoderDescription}
+        pathname="/decode"
+        jsonLd={decoderJsonLd}
+      />
       <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1219] flex items-center justify-between px-4 sm:px-6 shrink-0 transition-colors duration-200 z-30 relative">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">

@@ -3,14 +3,45 @@ import { ArrowLeft, Check, Copy, Settings2, Info } from 'lucide-react';
 import { DESCRIPTIONS, UuidVersion } from '../data/uuid-data';
 import { motion } from 'motion/react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import SeoHead from './SeoHead';
+import {
+  getBreadcrumbJsonLd,
+  getOrganizationJsonLd,
+  getWebsiteJsonLd,
+  toAbsoluteUrl,
+} from '../lib/seo';
 
 export default function GuidePage() {
   const navigate = useNavigate();
   const { version } = useParams<{ version: string }>();
 
   if (!version) {
+    const guideListDescription =
+      'Explore practical guidance for UUID versions, ULID, NanoID, CUID2, and Snowflake identifiers.';
+    const guideListJsonLd = [
+      getWebsiteJsonLd(),
+      getOrganizationJsonLd(),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Identifier Types Guide',
+        description: guideListDescription,
+        url: toAbsoluteUrl('/guide'),
+      },
+      getBreadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Guide', path: '/guide' },
+      ]),
+    ];
+
     return (
       <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-y-auto w-full">
+        <SeoHead
+          title="Identifier Types Guide"
+          description={guideListDescription}
+          pathname="/guide"
+          jsonLd={guideListJsonLd}
+        />
         <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1219] flex items-center px-4 sm:px-6 shrink-0 z-10 sticky top-0">
           <button
             onClick={() => navigate('/')}
@@ -78,9 +109,36 @@ export default function GuidePage() {
   if (!info) {
     return <Navigate to="/guide" replace />;
   }
+  const guideDetailDescription = `${info.desc} ${info.useCase}`;
+  const guideDetailPath = `/guide/${keyMatch}`;
+  const guideDetailJsonLd = [
+    getWebsiteJsonLd(),
+    getOrganizationJsonLd(),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'TechArticle',
+      headline: `${info.title} Guide`,
+      description: guideDetailDescription,
+      inLanguage: 'en',
+      about: info.title,
+      mainEntityOfPage: toAbsoluteUrl(guideDetailPath),
+    },
+    getBreadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Guide', path: '/guide' },
+      { name: info.title, path: guideDetailPath },
+    ]),
+  ];
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-y-auto w-full">
+      <SeoHead
+        title={`${info.title} Guide`}
+        description={guideDetailDescription}
+        pathname={guideDetailPath}
+        type="article"
+        jsonLd={guideDetailJsonLd}
+      />
       <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1219] flex items-center px-4 sm:px-6 shrink-0 z-10 sticky top-0">
         <button
           onClick={() => navigate('/guide')}

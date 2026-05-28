@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Copy, RefreshCw, Settings, Check, Settings2, Moon, Sun, Monitor, Info, BookOpen, X, Menu, FileText, FileSpreadsheet, ArrowRight, Loader2, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,6 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { UuidParseResult } from './UuidParseResult';
 import { parseUuid } from '../lib/uuid-parser';
+import SeoHead from './SeoHead';
+import {
+  getBreadcrumbJsonLd,
+  getOrganizationJsonLd,
+  getSoftwareApplicationJsonLd,
+  getWebsiteJsonLd,
+} from '../lib/seo';
 
 type NamespaceType = 'dns' | 'url' | 'oid' | 'x500' | 'custom';
 
@@ -142,13 +149,36 @@ export default function UuidGenerator() {
 
   const needsNamespace = options.version === 'v3' || options.version === 'v5';
   const { theme, setTheme } = useTheme();
+  const generatorDescription =
+    'Generate UUIDs, ULIDs, NanoIDs, CUID2, and Snowflake IDs with batch export and formatting controls.';
+  const generatorJsonLd = useMemo(
+    () => [
+      getWebsiteJsonLd(),
+      getOrganizationJsonLd(),
+      getSoftwareApplicationJsonLd('/', generatorDescription),
+      getBreadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'UUID Generator', path: '/' },
+      ]),
+    ],
+    [generatorDescription]
+  );
 
   return (
     <div className="flex flex-col h-full w-full">
+      <SeoHead
+        title="UUID Generator"
+        description={generatorDescription}
+        pathname="/"
+        jsonLd={generatorJsonLd}
+      />
       <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1219] flex items-center justify-between px-4 sm:px-6 shrink-0 transition-colors duration-200 z-30 relative">
         <div className="flex items-center gap-3">
           <button 
              onClick={() => setIsMobileSettingsOpen(!isMobileSettingsOpen)}
+             aria-label={isMobileSettingsOpen ? 'Close settings panel' : 'Open settings panel'}
+             aria-expanded={isMobileSettingsOpen}
+             aria-controls="generator-settings-panel"
              className="md:hidden p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             {isMobileSettingsOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -207,7 +237,7 @@ export default function UuidGenerator() {
         <aside className={cn(
           "absolute md:relative z-20 md:z-auto h-full w-[280px] md:w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1219] p-5 flex flex-col gap-6 shrink-0 overflow-y-auto transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none",
           isMobileSettingsOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
+        )} id="generator-settings-panel">
           <section>
             <label className="text-[10px] uppercase font-bold text-slate-500 mb-3 block tracking-wider">
               UUID Version
@@ -317,8 +347,11 @@ export default function UuidGenerator() {
             <label className="text-[10px] uppercase font-bold text-slate-500 mb-2 block tracking-wider">Configuration</label>
             <div>
               <div className="flex justify-between text-xs mb-2">
-                <span className="text-slate-600 dark:text-slate-400 font-medium pt-1 mt-auto mb-auto">Quantity</span>
+                <label htmlFor="quantity-input" className="text-slate-600 dark:text-slate-400 font-medium pt-1 mt-auto mb-auto">
+                  Quantity
+                </label>
                 <input
+                  id="quantity-input"
                   type="number"
                   min="1"
                   max="10000"
@@ -545,7 +578,11 @@ export default function UuidGenerator() {
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Identifier Details</h3>
                   <div className="text-xs text-slate-500 font-mono mt-1 break-all">{selectedDecodeUuid}</div>
                </div>
-               <button onClick={() => setSelectedDecodeUuid(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+               <button
+                 onClick={() => setSelectedDecodeUuid(null)}
+                 aria-label="Close decode details"
+                 className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+               >
                   <X className="w-5 h-5" />
                </button>
             </div>

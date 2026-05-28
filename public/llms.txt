@@ -1,0 +1,22 @@
+# UUID Toolkit
+
+UUID Toolkit is a web app for generating and decoding universal identifier formats.
+
+## Main pages
+- [UUID Generator](/)
+- [UUID Decoder](/decode)
+- [Identifier Types Guide](/guide)
+
+## Guide pages
+- [UUID v1](/guide/v1)
+- [UUID v3](/guide/v3)
+- [UUID v4](/guide/v4)
+- [UUID v5](/guide/v5)
+- [UUID v6](/guide/v6)
+- [UUID v7](/guide/v7)
+- [NIL UUID](/guide/nil)
+- [MAX UUID](/guide/max)
+- [ULID](/guide/ulid)
+- [NanoID](/guide/nanoid)
+- [CUID2](/guide/cuid2)
+- [Snowflake](/guide/snowflake)

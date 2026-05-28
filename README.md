@@ -45,9 +45,12 @@ npm run dev
 
 By default, the app runs at `http://localhost:3000`.
 
+For production SEO files, set `VITE_SITE_URL` in `.env` (see `.env.example`).
+
 ## Scripts
 
 - `npm run dev`: start development server (`--host 0.0.0.0`, port `3000`)
+- `npm run seo:files`: generate `public/sitemap.xml` and `public/robots.txt` from `VITE_SITE_URL`
 - `npm run build`: build for production
 - `npm run preview`: preview production build locally
 - `npm run lint`: type-check (`tsc --noEmit`)
@@ -73,4 +76,3 @@ docs/
 - [Docs overview](./docs/README.md)
 - [Features](./docs/FEATURES.md)
 - [Architecture](./docs/ARCHITECTURE.md)
-
