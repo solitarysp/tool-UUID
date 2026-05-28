@@ -529,7 +529,7 @@ export default function UuidGenerator() {
           </div>
 
           {/* System Status Bar */}
-          <footer className="mt-4 flex items-center justify-between text-[10px] text-slate-500 uppercase font-mono bg-white dark:bg-[#0B0E14] border border-slate-200 dark:border-slate-800 rounded px-4 py-2 shrink-0 transition-colors duration-200 shadow-sm dark:shadow-none">
+          <footer className="mt-4 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 uppercase font-mono bg-white dark:bg-[#0B0E14] border border-slate-200 dark:border-slate-800 rounded px-4 py-2 shrink-0 transition-colors duration-200 shadow-sm dark:shadow-none gap-2 sm:gap-0">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> SYSTEM ONLINE
@@ -537,9 +537,14 @@ export default function UuidGenerator() {
               <span className="opacity-30 font-bold hidden sm:inline">|</span>
               <div className="hidden sm:block">TOTAL GENERATED: {generatedItems.length}</div>
             </div>
-            <div className="text-slate-500 dark:text-slate-600">
-              SECURE PRNG ACTIVE
-            </div>
+            <a 
+              href="https://link.thanhlv.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors flex items-center gap-1 normal-case tracking-normal text-xs"
+            >
+              Check out more tools at link.thanhlv.com <ArrowRight className="w-3 h-3" />
+            </a>
           </footer>
         </div>
       </main>
