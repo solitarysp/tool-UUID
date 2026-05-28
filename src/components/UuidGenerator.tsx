@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from './ThemeProvider';
 import { UuidVersion, DESCRIPTIONS } from '../data/uuid-data';
 import { useNavigate } from 'react-router-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 type NamespaceType = 'dns' | 'url' | 'oid' | 'x500' | 'custom';
 
@@ -53,17 +54,29 @@ export default function UuidGenerator() {
   }, []);
 
   // Generate UUIDs based on options
-  const generateUuids = useCallback(() => {
+  const generateUuids = useCallback((delay = 200) => {
     setIsGenerating(true);
-    if (workerRef.current) {
-      workerRef.current.postMessage({ options });
-    }
+    const timeout = setTimeout(() => {
+      if (workerRef.current) {
+        workerRef.current.postMessage({ options });
+      }
+    }, delay);
+    return () => clearTimeout(timeout);
   }, [options]);
 
-  // Initial generation
+  // Auto-generate when options change
   useEffect(() => {
-    generateUuids();
-  }, [generateUuids]);
+    const cleanup = generateUuids(500);
+    return cleanup;
+  }, [options, generateUuids]);
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: generatedItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 44,
+    overscan: 5,
+  });
 
   const copyToClipboard = (text: string, index?: number) => {
     navigator.clipboard.writeText(text);
@@ -337,7 +350,7 @@ export default function UuidGenerator() {
           <section className="mt-auto pt-5 border-t border-slate-200 dark:border-slate-800">
             <button
                onClick={() => {
-                 generateUuids();
+                 generateUuids(150);
                  if (window.innerWidth < 768) setIsMobileSettingsOpen(false);
                }}
                disabled={isGenerating}
@@ -410,40 +423,59 @@ export default function UuidGenerator() {
               <span className="flex-1 font-medium truncate">Value ({DESCRIPTIONS[options.version].title})</span>
               <span className="w-12 sm:w-20 text-right pr-2 sm:pr-4 font-medium">Action</span>
             </div>
-            <div className="flex-1 overflow-y-auto bg-transparent">
+            <div className="flex-1 bg-transparent overflow-y-auto" ref={parentRef}>
               {generatedItems.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-medium py-20 text-xs sm:text-sm">
                   No UUIDs generated yet.
                 </div>
               ) : (
-                <div className="pb-2">
-                  {generatedItems.map((id, index) => (
-                    <div 
-                      key={`${index}-${id}`} 
-                      className="flex px-3 sm:px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group items-center gap-2 sm:gap-4"
-                    >
-                      <span className="w-6 sm:w-8 text-slate-400 dark:text-slate-600 text-[10px] sm:text-[11px] shrink-0">
-                        {(index + 1).toString().padStart(2, '0')}
-                      </span>
-                      <span className="flex-1 text-slate-800 dark:text-blue-300 selection:bg-blue-500 selection:text-white truncate font-medium dark:font-normal text-[11px] sm:text-[13px] tracking-tight sm:tracking-normal">
-                        {id}
-                      </span>
-                      <div className="w-12 sm:w-20 text-right pr-1 sm:pr-2">
-                        <button
-                          onClick={() => copyToClipboard(id, index)}
-                          className={cn(
-                            "p-1.5 rounded transition-all inline-flex",
-                            copiedIndex === index 
-                              ? "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-400/10" 
-                              : "text-slate-400 dark:text-slate-500 opacity-100 sm:opacity-0 group-hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                          )}
-                          title="Copy to clipboard"
-                        >
-                          {copiedIndex === index ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        </button>
+                <div
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const index = virtualRow.index;
+                    const id = generatedItems[index];
+
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className="flex px-3 sm:px-4 py-2 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group items-center gap-2 sm:gap-4 box-border"
+                      >
+                        <span className="w-6 sm:w-8 text-slate-400 dark:text-slate-600 text-[10px] sm:text-[11px] shrink-0">
+                          {(index + 1).toString().padStart(2, '0')}
+                        </span>
+                        <span className="flex-1 text-slate-800 dark:text-blue-300 selection:bg-blue-500 selection:text-white truncate font-medium dark:font-normal text-[11px] sm:text-[13px] tracking-tight sm:tracking-normal">
+                          {id}
+                        </span>
+                        <div className="w-12 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
+                          <button
+                            onClick={() => copyToClipboard(id, index)}
+                            className={cn(
+                              "p-1.5 rounded transition-all inline-flex",
+                              copiedIndex === index 
+                                ? "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-400/10" 
+                                : "text-slate-400 dark:text-slate-500 opacity-100 sm:opacity-0 group-hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            )}
+                            title="Copy to clipboard"
+                          >
+                            {copiedIndex === index ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
