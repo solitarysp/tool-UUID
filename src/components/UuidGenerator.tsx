@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Copy, RefreshCw, Settings, Check, Settings2, Moon, Sun, Monitor, Info, BookOpen, X, Menu, FileText, FileSpreadsheet, ArrowRight, Loader2 } from 'lucide-react';
+import { Copy, RefreshCw, Settings, Check, Settings2, Moon, Sun, Monitor, Info, BookOpen, X, Menu, FileText, FileSpreadsheet, ArrowRight, Loader2, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from './ThemeProvider';
 import { UuidVersion, DESCRIPTIONS } from '../data/uuid-data';
 import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { UuidParseResult } from './UuidParseResult';
+import { parseUuid } from '../lib/uuid-parser';
 
 type NamespaceType = 'dns' | 'url' | 'oid' | 'x500' | 'custom';
 
@@ -40,6 +42,7 @@ export default function UuidGenerator() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+  const [selectedDecodeUuid, setSelectedDecodeUuid] = useState<string | null>(null);
   
   const workerRef = useRef<Worker | null>(null);
 
@@ -483,7 +486,14 @@ export default function UuidGenerator() {
                         <span className="flex-1 text-slate-800 dark:text-blue-300 selection:bg-blue-500 selection:text-white truncate font-medium dark:font-normal text-[11px] sm:text-[13px] tracking-tight sm:tracking-normal">
                           {id}
                         </span>
-                        <div className="w-12 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
+                        <div className="w-16 sm:w-24 flex items-center justify-end gap-1 pr-1 sm:pr-2 shrink-0">
+                          <button
+                            onClick={() => setSelectedDecodeUuid(id)}
+                            className="p-1.5 rounded transition-all inline-flex text-slate-400 dark:text-slate-500 opacity-100 sm:opacity-0 group-hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            title="Decode Identifier"
+                          >
+                            <Search className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => copyToClipboard(id, index)}
                             className={cn(
@@ -525,6 +535,31 @@ export default function UuidGenerator() {
           </footer>
         </div>
       </main>
+
+      {/* Decode Modal */}
+      {selectedDecodeUuid && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm sm:p-6" onClick={() => setSelectedDecodeUuid(null)}>
+          <div className="bg-white dark:bg-[#0F1219] w-full max-w-2xl rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800">
+               <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Identifier Details</h3>
+                  <div className="text-xs text-slate-500 font-mono mt-1 break-all">{selectedDecodeUuid}</div>
+               </div>
+               <button onClick={() => setSelectedDecodeUuid(null)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+               </button>
+            </div>
+            <div className="p-4 sm:p-6 overflow-y-auto">
+               <UuidParseResult parsed={parseUuid(selectedDecodeUuid)} />
+            </div>
+            <div className="p-4 sm:p-6 pb-6 pt-2 bg-slate-50 border-t border-slate-200 dark:bg-slate-800/20 dark:border-slate-800 flex justify-end">
+               <button onClick={() => setSelectedDecodeUuid(null)} className="px-4 py-2 font-medium text-sm text-slate-600 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                  Close
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
