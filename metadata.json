@@ -1,0 +1,6 @@
+{
+  "name": "UUID Generator",
+  "description": "A comprehensive UUID generator supporting multiple versions including v1, v4, v3, v5, and v7 with advanced formatting options.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
