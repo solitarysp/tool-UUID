@@ -31,10 +31,11 @@ const DEFAULT_OPTIONS: GeneratorOptions = {
   nameValue: '',
 };
 
+import { useUuidStore } from '../store/uuidStore';
+
 export default function UuidGenerator() {
   const navigate = useNavigate();
-  const [options, setOptions] = useState<GeneratorOptions>(DEFAULT_OPTIONS);
-  const [generatedItems, setGeneratedItems] = useState<string[]>([]);
+  const { options, setOptions, generatedItems, setGeneratedItems, isInitialLoad, setIsInitialLoad } = useUuidStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
@@ -51,7 +52,7 @@ export default function UuidGenerator() {
     return () => {
       workerRef.current?.terminate();
     };
-  }, []);
+  }, [setGeneratedItems]);
 
   // Generate UUIDs based on options
   const generateUuids = useCallback((delay = 200) => {
@@ -64,11 +65,23 @@ export default function UuidGenerator() {
     return () => clearTimeout(timeout);
   }, [options]);
 
-  // Auto-generate when options change
+  const previousOptions = useRef(options);
+
   useEffect(() => {
-    const cleanup = generateUuids(500);
-    return cleanup;
-  }, [options, generateUuids]);
+    // If options changed, auto-generate with 500ms debounce
+    if (previousOptions.current !== options) {
+      previousOptions.current = options;
+      return generateUuids(500);
+    }
+    
+    // If we're here, it means we just mounted (options are same as initial).
+    // If we have no items in the global store, generate immediately.
+    // Otherwise, we do nothing and preserve existing items.
+    if (generatedItems.length === 0) {
+      return generateUuids(100);
+    }
+  }, [options, generateUuids, generatedItems.length]);
+
 
   const parentRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
@@ -143,9 +156,20 @@ export default function UuidGenerator() {
           <span className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">UUID <span className="text-blue-500 dark:text-blue-400">Generator</span></span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="text-xs font-mono text-slate-500 uppercase tracking-widest hidden lg:block">
-            UNIVERSAL UNIQUE IDENTIFIERS
+          <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800/80">
+            <button 
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm transition-colors"
+            >
+              Generator
+            </button>
+            <button 
+              onClick={() => navigate('/decode')} 
+              className="px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+            >
+              Decoder
+            </button>
           </div>
+
           <button 
              onClick={() => navigate('/guide')}
              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-1.5 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
