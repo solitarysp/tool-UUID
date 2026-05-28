@@ -1,9 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { v1, v3, v4, v5, v6, v7, v1ToV6, NIL, MAX, validate } from 'uuid';
-import { ulid } from 'ulid';
-import { nanoid } from 'nanoid';
-import { createId as cuid2 } from '@paralleldrive/cuid2';
-import { Copy, RefreshCw, Settings, Check, Settings2, Moon, Sun, Monitor, Info, BookOpen, X, Menu, FileText, FileSpreadsheet, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Copy, RefreshCw, Settings, Check, Settings2, Moon, Sun, Monitor, Info, BookOpen, X, Menu, FileText, FileSpreadsheet, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from './ThemeProvider';
@@ -11,25 +7,6 @@ import { UuidVersion, DESCRIPTIONS } from '../data/uuid-data';
 import { useNavigate } from 'react-router-dom';
 
 type NamespaceType = 'dns' | 'url' | 'oid' | 'x500' | 'custom';
-
-let sfSequence = 0;
-let sfLastTimestamp = -1;
-function generateSnowflake(): string {
-  let timestamp = Date.now();
-  if (timestamp === sfLastTimestamp) {
-    sfSequence = (sfSequence + 1) & 4095;
-    if (sfSequence === 0) {
-      while (Date.now() <= timestamp) {} // Wait to avoid collision
-      timestamp = Date.now();
-    }
-  } else {
-    sfSequence = 0;
-  }
-  sfLastTimestamp = timestamp;
-  const epoch = 1288834974657n; // Twitter Epoch
-  const time = BigInt(timestamp) - epoch;
-  return ((time << 22n) | (1n << 12n) | BigInt(sfSequence)).toString();
-}
 
 interface GeneratorOptions {
   version: UuidVersion;
@@ -53,113 +30,34 @@ const DEFAULT_OPTIONS: GeneratorOptions = {
   nameValue: '',
 };
 
-const NAMESPACES = {
-  dns: v3.DNS,
-  url: v3.URL,
-  oid: undefined, // Will be hardcoded if needed or just use standard
-  x500: undefined,
-};
-
-// Hardcoded standard namespaces just in case
-const NS_DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-const NS_URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-const NS_OID = '6ba7b812-9dad-11d1-80b4-00c04fd430c8';
-const NS_X500 = '6ba7b814-9dad-11d1-80b4-00c04fd430c8';
-
 export default function UuidGenerator() {
   const navigate = useNavigate();
   const [options, setOptions] = useState<GeneratorOptions>(DEFAULT_OPTIONS);
   const [generatedItems, setGeneratedItems] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+  
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('../workers/uuid-worker.ts', import.meta.url), { type: 'module' });
+    workerRef.current.onmessage = (e) => {
+      setGeneratedItems(e.data.results);
+      setIsGenerating(false);
+    };
+    return () => {
+      workerRef.current?.terminate();
+    };
+  }, []);
 
   // Generate UUIDs based on options
   const generateUuids = useCallback(() => {
-    const { version, quantity, uppercase, hyphens, braces, namespaceType, customNamespace, nameValue } = options;
-    const newItems: string[] = [];
-
-    // Resolve namespace
-    let resolvedNamespace = NS_DNS;
-    if (namespaceType === 'url') resolvedNamespace = NS_URL;
-    else if (namespaceType === 'oid') resolvedNamespace = NS_OID;
-    else if (namespaceType === 'x500') resolvedNamespace = NS_X500;
-    else if (namespaceType === 'custom') {
-        if (customNamespace && validate(customNamespace)) {
-            resolvedNamespace = customNamespace;
-        } else {
-            // fallback if invalid
-            resolvedNamespace = NS_DNS;
-        }
+    setIsGenerating(true);
+    if (workerRef.current) {
+      workerRef.current.postMessage({ options });
     }
-
-    const safeName = nameValue || 'example';
-
-    try {
-      for (let i = 0; i < quantity; i++) {
-        let id = '';
-        switch (version) {
-          case 'v1':
-            id = v1();
-            break;
-          case 'v3':
-            id = v3(safeName, resolvedNamespace);
-            break;
-          case 'v4':
-            id = v4();
-            break;
-          case 'v5':
-            id = v5(safeName, resolvedNamespace);
-            break;
-          case 'v6':
-            id = v6 ? v6() : v1ToV6 ? v1ToV6(v1()) : v4();
-            break;
-          case 'v7':
-            // Check if v7 is available, if not fallback to v4 or throw
-            id = v7 ? v7() : v4(); 
-            break;
-          case 'nil':
-            id = NIL;
-            break;
-          case 'max':
-            // If MAX is available in the library use it, otherwise use constant
-            id = MAX || 'ffffffff-ffff-ffff-ffff-ffffffffffff';
-            break;
-          case 'ulid':
-            id = ulid();
-            break;
-          case 'nanoid':
-            id = nanoid();
-            break;
-          case 'cuid2':
-            id = cuid2();
-            break;
-          case 'snowflake':
-            id = generateSnowflake();
-            break;
-          default:
-            id = v4();
-        }
-
-        // Apply formatting (only if it's a UUID version that has hyphens by default, but let's apply across if possible)
-        if (!hyphens && ['v1', 'v3', 'v4', 'v5', 'v6', 'v7', 'nil', 'max'].includes(version)) {
-          id = id.replace(/-/g, '');
-        }
-        if (uppercase && ['v1', 'v3', 'v4', 'v5', 'v6', 'v7', 'nil', 'max'].includes(version) || version === 'ulid' && uppercase) {
-          id = id.toUpperCase();
-        }
-        if (braces && ['v1', 'v3', 'v4', 'v5', 'v6', 'v7', 'nil', 'max'].includes(version)) {
-          id = `{${id}}`;
-        }
-
-        newItems.push(id);
-      }
-    } catch (e) {
-      console.error("Error generating UUID:", e);
-      newItems.push("Error generating UUIDs with current parameters");
-    }
-
-    setGeneratedItems(newItems);
   }, [options]);
 
   // Initial generation
@@ -379,13 +277,26 @@ export default function UuidGenerator() {
             <label className="text-[10px] uppercase font-bold text-slate-500 mb-2 block tracking-wider">Configuration</label>
             <div>
               <div className="flex justify-between text-xs mb-2">
-                <span className="text-slate-600 dark:text-slate-400">Quantity</span>
-                <span className="text-blue-600 dark:text-blue-400 font-mono font-medium">{options.quantity}</span>
+                <span className="text-slate-600 dark:text-slate-400 font-medium pt-1 mt-auto mb-auto">Quantity</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={options.quantity}
+                  onChange={(e) => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val)) val = 1;
+                    if (val > 10000) val = 10000;
+                    if (val < 1) val = 1;
+                    handleOptionChange('quantity', val);
+                  }}
+                  className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-right px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
               </div>
               <input
                 type="range"
                 min="1"
-                max="500"
+                max="10000"
                 value={options.quantity}
                 onChange={(e) => handleOptionChange('quantity', parseInt(e.target.value))}
                 className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500"
@@ -429,10 +340,20 @@ export default function UuidGenerator() {
                  generateUuids();
                  if (window.innerWidth < 768) setIsMobileSettingsOpen(false);
                }}
-               className="w-full px-6 py-2.5 bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-xs rounded font-bold text-white shadow-md shadow-blue-500/20 dark:shadow-blue-900/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+               disabled={isGenerating}
+               className="w-full px-6 py-2.5 bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-xs rounded font-bold text-white shadow-md shadow-blue-500/20 dark:shadow-blue-900/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <RefreshCw className="w-4 h-4" />
-              Generate New
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Generate New
+                </>
+              )}
             </button>
           </section>
         </aside>
