@@ -1,5 +1,5 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { Menu, X, Settings, BookOpen, Sun, Monitor, Moon, Search, FileText, Code2, ArrowRight, Upload, Download, Trash2, FileJson } from 'lucide-react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { Menu, X, Settings, BookOpen, Sun, Monitor, Moon, Search, FileText, Code2, ArrowRight, Upload, Download, Trash2, FileJson, Share2, Check } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTheme } from './ThemeProvider';
 import { cn } from '../lib/utils';
@@ -14,6 +14,31 @@ export default function UuidDecoder() {
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [inputContent, setInputContent] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#q=')) {
+      try {
+        const decoded = decodeURIComponent(atob(hash.slice(3)));
+        setInputContent(decoded);
+      } catch (e) {
+        console.error('Failed to decode share URL', e);
+      }
+    }
+  }, []);
+
+  const handleShare = () => {
+    try {
+      const hash = '#q=' + btoa(encodeURIComponent(inputContent));
+      const url = window.location.origin + window.location.pathname + hash;
+      navigator.clipboard.writeText(url);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    } catch (e) {
+      console.error('Failed to copy share URL', e);
+    }
+  };
 
   const items = useMemo(() => {
     const text = inputContent.trim();
@@ -259,14 +284,24 @@ export default function UuidDecoder() {
               ) : (
                  <div className="mb-4 text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                     <span>Parsed Results ({items.length})</span>
-                    <button 
-                      onClick={exportResultsCsv}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                      title="Export Results as CSV"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Export CSV
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={handleShare}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        title="Share this decode view"
+                      >
+                        {copiedShare ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+                        {copiedShare ? 'Copied' : 'Share'}
+                      </button>
+                      <button 
+                        onClick={exportResultsCsv}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                        title="Export Results as CSV"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export CSV
+                      </button>
+                    </div>
                  </div>
               )}
               
